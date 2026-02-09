@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+backend/ai_service/venv/
+.env
+
+apps/mobile/.dart_tool/
+apps/mobile/.idea/
+apps/mobile/build/
+apps/mobile/ios/Pods/
+
+apps/web/.env.local
+apps/web/.next/
+apps/web/node_modules/
+
+.DS_Store
