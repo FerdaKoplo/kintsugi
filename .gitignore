@@ -1,7 +1,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-backend/ai_service/venv/
+backend/fastapi/venv/
 .env
 
 apps/mobile/.dart_tool/
