@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.schemas.schema import Item, ItemStatus, Job, JobStatus
 from backend.fastapi.app.schemas.dto import JobCreate
 from backend.fastapi.app.services.user.badge_service import BadgeService
+from sqlalchemy.exc import IntegrityError
 
 
 class JobService:
@@ -52,8 +53,22 @@ class JobService:
         if item:
             item.status = ItemStatus.IN_PROGRESS
 
-        self.db.commit()
-        self.db.refresh(new_job)
+        try:
+            self.db.commit()
+            self.db.refresh(new_job)
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to create job. The item_id or fixer_id or client_id might be invalid.",
+            )
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred while saving the job.",
+            )
+
         return new_job
 
     def update_job_status(self, job_id: int, new_status: JobStatus) -> Optional[Job]:
@@ -86,6 +101,19 @@ class JobService:
                 user_id=fixer_id, badge_name="First Fix", badge_slug="first-fix"
             )
 
-        self.db.commit()
-        self.db.refresh(job)
+        try:
+            self.db.commit()
+            self.db.refresh(job)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to complete job. The item_id or fixer_id or client_id might be invalid.",
+            )
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred while completing the job.",
+            )
+
         return job

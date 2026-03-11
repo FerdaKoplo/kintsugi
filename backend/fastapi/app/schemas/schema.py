@@ -32,6 +32,12 @@ class RewardStatus(enum.Enum):
     EXPIRED = "expired"
 
 
+class MessageType(str, enum.Enum):
+    TEXT = "text"
+    IMAGE = "image"
+    VIDEO = "video"
+
+
 class UserVerifyStatus(enum.Enum):
     UNVERIFIED = "unverified"
 
@@ -315,12 +321,14 @@ class Job(Base):
     )
 
 
-class Message:
+class Message(Base):
     __tablename__ = "messages"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), nullable=False)
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-
+    message_type: Mapped[MessageType] = mapped_column(  # ← add this
+        SAEnum(MessageType), default=MessageType.TEXT
+    )
     message_status: Mapped[MessageStatus] = mapped_column(
         SAEnum(MessageStatus), default=MessageStatus.DELIVERED
     )
@@ -336,7 +344,7 @@ class Message:
     )
 
 
-class MessageAttachment:
+class MessageAttachment(Base):
     __tablename__ = "message_attachments"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     message_id: Mapped[int] = mapped_column(ForeignKey("messages.id"), nullable=False)
@@ -347,7 +355,7 @@ class MessageAttachment:
     message: Mapped["Message"] = relationship("Message", back_populates="attachments")
 
 
-class Review:
+class Review(Base):
     __tablename__ = "reviews"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), nullable=False)

@@ -1,8 +1,11 @@
+from fastapi import HTTPException, status
 from gotrue import Optional
 from sqlalchemy.orm import Session
+from starlette.status import HTTP_400_BAD_REQUEST
 from app.schemas.schema import Item, Offer, OfferStatus
 from backend.fastapi.app.schemas.dto import OfferCreate
 from datetime import datetime, timezone, timedelta
+from sqlalchemy.exc import IntegrityError
 
 
 class OfferService:
@@ -27,8 +30,24 @@ class OfferService:
         )
 
         self.db.add(new_offer)
-        self.db.commit()
-        self.db.refresh(new_offer)
+
+        try:
+            self.db.commit()
+            self.db.refresh(new_offer)
+
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to create offer. The item_id or fixer_id might be invalid.",
+            )
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred while saving the offer. ",
+            )
+
         return new_offer
 
     def accept_offer(self, offer_id: int) -> Optional[Offer]:
@@ -44,8 +63,20 @@ class OfferService:
             Offer.status == OfferStatus.PENDING,
         ).update({"status": OfferStatus.REJECTED})
 
-        self.db.commit()
-        self.db.refresh(offer)
+        try:
+            self.db.commit()
+            self.db.refresh(offer)
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=HTTP_400_BAD_REQUEST, detail="Failed to accept offer"
+            )
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred while saving the offer. ",
+            )
 
         return offer
 
@@ -53,14 +84,41 @@ class OfferService:
         offer = self.get_offer(offer_id)
         if offer and offer.status == OfferStatus.PENDING:
             offer.status = OfferStatus.REJECTED
-            self.db.commit()
-            self.db.refresh(offer)
+            try:
+                self.db.commit()
+                self.db.refresh(offer)
+            except IntegrityError:
+                self.db.rollback()
+                raise HTTPException(
+                    status_code=HTTP_400_BAD_REQUEST, detail="Failed to reject offer"
+                )
+            except Exception as e:
+                self.db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="An unexpected error occurred while saving the offer. ",
+                )
+
         return offer
 
     def cancel_offer(self, offer_id) -> Optional[Offer]:
         offer = self.get_offer(offer_id)
         if offer and offer.status == OfferStatus.PENDING:
             offer.status = OfferStatus.WITHDRAWN
-            self.db.commit()
-            self.db.refresh(offer)
+
+            try:
+                self.db.commit()
+                self.db.refresh(offer)
+            except IntegrityError:
+                self.db.rollback()
+                raise HTTPException(
+                    status_code=HTTP_400_BAD_REQUEST, detail="Failed to cancel offer"
+                )
+            except Exception as e:
+                self.db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="An unexpected error occurred while saving the offer. ",
+                )
+
         return offer
