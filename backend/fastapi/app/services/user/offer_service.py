@@ -1,19 +1,46 @@
+import uuid
 from fastapi import HTTPException, status
 from gotrue import Optional
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_400_BAD_REQUEST
 from app.schemas.schema import Item, Offer, OfferStatus
+from backend.fastapi.app.libs.pagination import PaginatedResponse
 from backend.fastapi.app.schemas.dto import OfferCreate
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.exc import IntegrityError
+
+from backend.fastapi.app.schemas.dtos.offer_dto import OfferResponse
 
 
 class OfferService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_offer(self, offer_id: int) -> Optional[Offer]:
-        return self.db.query(Offer).filter(Offer.id == offer_id).first()
+    def get_offers(
+        self,
+        item_id: Optional[int] = None,
+        fixer_id: Optional[uuid.UUID] = None,
+        status: Optional[OfferStatus] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> PaginatedResponse[OfferResponse]:
+        query = self.db.query(Offer)
+
+        if item_id:
+            query = query.filter(Offer.item_id == item_id)
+        if fixer_id:
+            query = query.filter(Offer.fixer_id == fixer_id)
+        if status:
+            query = query.filter(Offer.status == status)
+
+        total = query.count()
+        offers = query.offset((page - 1) * page_size).limit(page_size).all()
+        return PaginatedResponse[OfferResponse](
+            total=total,
+            page=page,
+            page_size=page_size,
+            results=[OfferResponse.model_validate(o) for o in offers],
+        )
 
     def create_offer(self, offer_data: OfferCreate) -> Offer:
         item = self.db.query(Item).filter(Item.id == offer_data.item_id).first()

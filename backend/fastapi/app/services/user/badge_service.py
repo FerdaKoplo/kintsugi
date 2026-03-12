@@ -15,11 +15,12 @@ class BadgeService:
         return self.db.query(UserBadge).filter(UserBadge.user_id == user_id).all()
 
     def has_badge(self, user_id: str, badge_slug: str) -> bool:
-        stmt = exists().where(
-            (UserBadge.user_id == user_id) & (UserBadge.badge_slug == badge_slug)
+        count = (
+            self.db.query(UserBadge)
+            .filter(UserBadge.user_id == user_id, UserBadge.badge_slug == badge_slug)
+            .count()
         )
-
-        return self.db.query(stmt).scalar()
+        return count > 0
 
     def award_badge(self, user_id: str, badge_name: str, badge_slug: str) -> UserBadge:
         user = self.db.query(User).filter(User.id == user_id).first()
