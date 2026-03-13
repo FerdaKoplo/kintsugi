@@ -4,12 +4,11 @@ from gotrue import Optional
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_400_BAD_REQUEST
 from app.schemas.schema import Item, Offer, OfferStatus
+from backend.fastapi.app.libs.db_helper import _commit_and_refresh
 from backend.fastapi.app.libs.pagination import PaginatedResponse
-from backend.fastapi.app.schemas.dto import OfferCreate
+from backend.fastapi.app.schemas.dtos.offer_dto import OfferResponse, OfferCreate
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.exc import IntegrityError
-
-from backend.fastapi.app.schemas.dtos.offer_dto import OfferResponse
 
 
 class OfferService:
@@ -42,46 +41,34 @@ class OfferService:
             results=[OfferResponse.model_validate(o) for o in offers],
         )
 
-    def create_offer(self, offer_data: OfferCreate) -> Offer:
+    def _get_pending_offer(self, offer_id: int) -> Offer:
+        offer = self.db.query(Offer).filter(Offer.id == offer_id).first()
+        if not offer:
+            raise HTTPException(status_code=404, detail="Offer not found.")
+        if offer.status != OfferStatus.PENDING:
+            raise HTTPException(
+                status_code=400, detail=f"Offer is already {offer.status.value}."
+            )
+        return offer
+
+    def create_offer(self, offer_data: OfferCreate) -> OfferResponse:
         item = self.db.query(Item).filter(Item.id == offer_data.item_id).first()
         if not item:
             raise ValueError("This item is no longer accepting offers.")
 
-        new_offer = Offer(
+        offer = Offer(
             item_id=offer_data.item_id,
             fixer_id=offer_data.fixer_id,
-            offered_price=offer_data.offered_price,
-            message=offer_data.message,
+            price_bid=offer_data.price_bid,
             status=OfferStatus.PENDING,
-            created_at=datetime.now(timezone.utc),
         )
 
-        self.db.add(new_offer)
+        self.db.add(offer)
+        offer = _commit_and_refresh(self.db, offer)
+        return OfferResponse.model_validate(offer)
 
-        try:
-            self.db.commit()
-            self.db.refresh(new_offer)
-
-        except IntegrityError:
-            self.db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to create offer. The item_id or fixer_id might be invalid.",
-            )
-        except Exception as e:
-            self.db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An unexpected error occurred while saving the offer. ",
-            )
-
-        return new_offer
-
-    def accept_offer(self, offer_id: int) -> Optional[Offer]:
-        offer = self.get_offer(offer_id)
-        if not offer or offer.status != OfferStatus.PENDING:
-            return None
-
+    def accept_offer(self, offer_id: int) -> OfferResponse:
+        offer = self._get_pending_offer(offer_id)
         offer.status = OfferStatus.ACCEPTED
 
         self.db.query(Offer).filter(
@@ -90,62 +77,17 @@ class OfferService:
             Offer.status == OfferStatus.PENDING,
         ).update({"status": OfferStatus.REJECTED})
 
-        try:
-            self.db.commit()
-            self.db.refresh(offer)
-        except IntegrityError:
-            self.db.rollback()
-            raise HTTPException(
-                status_code=HTTP_400_BAD_REQUEST, detail="Failed to accept offer"
-            )
-        except Exception as e:
-            self.db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An unexpected error occurred while saving the offer. ",
-            )
+        offer = _commit_and_refresh(self.db, offer)
+        return OfferResponse.model_validate(offer)
 
-        return offer
+    def reject_offer(self, offer_id) -> OfferResponse:
+        offer = self._get_pending_offer(offer_id)
+        offer.status = OfferStatus.REJECTED
+        offer = _commit_and_refresh(self.db, offer)
+        return OfferResponse.model_validate(offer)
 
-    def reject_offer(self, offer_id) -> Optional[Offer]:
-        offer = self.get_offer(offer_id)
-        if offer and offer.status == OfferStatus.PENDING:
-            offer.status = OfferStatus.REJECTED
-            try:
-                self.db.commit()
-                self.db.refresh(offer)
-            except IntegrityError:
-                self.db.rollback()
-                raise HTTPException(
-                    status_code=HTTP_400_BAD_REQUEST, detail="Failed to reject offer"
-                )
-            except Exception as e:
-                self.db.rollback()
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="An unexpected error occurred while saving the offer. ",
-                )
-
-        return offer
-
-    def cancel_offer(self, offer_id) -> Optional[Offer]:
-        offer = self.get_offer(offer_id)
-        if offer and offer.status == OfferStatus.PENDING:
-            offer.status = OfferStatus.WITHDRAWN
-
-            try:
-                self.db.commit()
-                self.db.refresh(offer)
-            except IntegrityError:
-                self.db.rollback()
-                raise HTTPException(
-                    status_code=HTTP_400_BAD_REQUEST, detail="Failed to cancel offer"
-                )
-            except Exception as e:
-                self.db.rollback()
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="An unexpected error occurred while saving the offer. ",
-                )
-
-        return offer
+    def cancel_offer(self, offer_id) -> OfferResponse:
+        offer = self._get_pending_offer(offer_id)
+        offer.status = OfferStatus.WITHDRAWN
+        offer = _commit_and_refresh(self.db, offer)
+        return OfferResponse.model_validate(offer)

@@ -30,10 +30,3 @@ class JobResponse(JobBase):
 
     class Config:
         from_attributes = True
-
-
-class OfferCreate(BaseModel):
-    item_id: int
-    fixer_id: UUID
-    offered_price: float
-    message: Optional[str] = None
