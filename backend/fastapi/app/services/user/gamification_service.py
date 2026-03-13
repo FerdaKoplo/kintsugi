@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from app.schemas.schema import UserGamification
 
-
 XP_PER_LEVEL_BASE = 100
 STREAK_BONUS_XP = 10
 

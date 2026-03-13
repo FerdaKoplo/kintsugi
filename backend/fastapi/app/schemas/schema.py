@@ -40,7 +40,6 @@ class MessageType(str, enum.Enum):
 
 class UserVerifyStatus(enum.Enum):
     UNVERIFIED = "unverified"
-
     PENDING = "pending"
     VERIFIED = "verified"
     REJECTED = "rejected"

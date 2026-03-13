@@ -15,6 +15,7 @@ class OfferService:
     def __init__(self, db: Session):
         self.db = db
 
+    # shared
     def get_offers(
         self,
         item_id: Optional[int] = None,
@@ -51,6 +52,7 @@ class OfferService:
             )
         return offer
 
+    # all user
     def create_offer(self, offer_data: OfferCreate) -> OfferResponse:
         item = self.db.query(Item).filter(Item.id == offer_data.item_id).first()
         if not item:
@@ -67,8 +69,12 @@ class OfferService:
         offer = _commit_and_refresh(self.db, offer)
         return OfferResponse.model_validate(offer)
 
-    def accept_offer(self, offer_id: int) -> OfferResponse:
+    def accept_offer(self, offer_id: int, fixer_id: uuid.UUID) -> OfferResponse:
         offer = self._get_pending_offer(offer_id)
+        if offer.fixer_id != fixer_id:
+            raise HTTPException(
+                status_code=403, detail="You can only accept offers on your own items"
+            )
         offer.status = OfferStatus.ACCEPTED
 
         self.db.query(Offer).filter(
