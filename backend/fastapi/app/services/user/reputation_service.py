@@ -1,24 +1,65 @@
 from os.path import expanduser
+import uuid
+from gotrue import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from sqlalchemy.sql.functions import user
 from app.schemas.schema import UserReputation, User, VerificationTier, Review
+from backend.fastapi.app.libs.db_helper import _commit_and_refresh
+from backend.fastapi.app.libs.pagination import PaginatedResponse
+from backend.fastapi.app.schemas.dtos.user_reputation_dto import UserReputationResponse
 
 
 class ReputationService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_reputation(self, user_id: str) -> UserReputation:
+    # shared
+    def get_reputation_by_user_id(self, user_id: uuid.UUID) -> UserReputation:
         rep = (
             self.db.query(UserReputation)
             .filter(UserReputation.user_id == user_id)
             .first()
         )
         if not rep:
-            rep = self.create_initial_reputation(user_id)
+            raise HTTPException(status_code=404, detail="Reputation record not found.")
         return rep
 
-    def create_initial_reputation(self, user_id: str) -> UserReputation:
+    # admin
+    def get_reputation(
+        self,
+        trust_score: Optional[int] = None,
+        verification_tier: Optional[VerificationTier] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> PaginatedResponse[UserReputationResponse]:
+        query = self.db.query(UserReputation)
+
+        if trust_score is not None:
+            query = query.filter(UserReputation.trust_score == trust_score)
+        if verification_tier:
+            query = query.filter(UserReputation.verification_tier == verification_tier)
+
+        total = query.count()
+        reputations = query.offset((page - 1) * page_size).limit(page_size).all()
+        return PaginatedResponse[UserReputationResponse](
+            total=total,
+            page=page,
+            page_size=page_size,
+            results=[UserReputationResponse.model_validate(r) for r in reputations],
+        )
+
+    def update_verification(
+        self, user_id: uuid.UUID, tier: VerificationTier
+    ) -> UserReputationResponse:
+        rep = self.get_reputation_by_user_id(user_id)
+        rep.verification_tier = tier
+        self._recalculate_trust_score(rep)
+        rep = _commit_and_refresh(self.db, rep)
+        return UserReputationResponse.model_validate(rep)
+
+    # users
+    def create_initial_reputation(self, user_id: str) -> UserReputationResponse:
         new_rep = UserReputation(
             user_id=user_id,
             average_rating=0.0,
@@ -27,32 +68,25 @@ class ReputationService:
             verification_tier=VerificationTier.UNVERIFIED,
         )
         self.db.add(new_rep)
-        self.db.commit()
-        self.db.refresh(new_rep)
-        return new_rep
+        new_rep = _commit_and_refresh(self.db, new_rep)
+        return UserReputationResponse.model_validate(new_rep)
 
-    def update_rating(self, user_id: str, new_rating: int):
-        rep = self.get_reputation(user_id)
+    def update_rating(
+        self, user_id: uuid.UUID, new_rating: float
+    ) -> UserReputationResponse:
+        if not (0.0 <= new_rating <= 5.0):
+            raise ValueError("Rating must be between 0.0 and 5.0.")
 
+        rep = self.get_reputation_by_user_id(user_id)
         current_total_score = rep.average_rating * rep.total_reviews
+
         rep.total_reviews += 1
         rep.average_rating = (current_total_score + new_rating) / rep.total_reviews
 
         self._recalculate_trust_score(rep)
+        rep = _commit_and_refresh(self.db, rep)
 
-        self.db.commit()
-        self.db.refresh(rep)
-        return rep
-
-    def update_verification(self, user_id: str, tier: VerificationTier):
-        rep = self.get_reputation(user_id)
-        rep.verification_tier = tier
-
-        self._recalculate_trust_score(rep)
-
-        self.db.commit()
-        self.db.refresh(rep)
-        return rep
+        return UserReputationResponse.model_validate(rep)
 
     def _recalculate_trust_score(self, rep: UserReputation):
         score = 50
