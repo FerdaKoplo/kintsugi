@@ -122,6 +122,8 @@ class User(Base):
     user_status: Mapped[UserStatus] = mapped_column(
         SAEnum(UserStatus), default=UserStatus.UNVERIFIED, nullable=False
     )
+    latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

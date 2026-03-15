@@ -1,6 +1,13 @@
+import uuid
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
-from app.schemas.schema import UserGamification
+from fastapi import HTTPException
+from backend.fastapi.app.schemas.dtos.user_gamification_dto import (
+    UserGamificationResponse,
+)
+from backend.fastapi.app.libs.db_helper import _commit_and_refresh
+from backend.fastapi.app.schemas.schema import UserGamification
+
 
 XP_PER_LEVEL_BASE = 100
 STREAK_BONUS_XP = 10
@@ -10,69 +17,83 @@ class GamificationService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_progress(self, user_id: str) -> UserGamification:
+    # shared
+    def get_progress(self, user_id: uuid.UUID) -> UserGamification:
         progress = (
             self.db.query(UserGamification)
             .filter(UserGamification.user_id == user_id)
             .first()
         )
         if not progress:
-            progress = UserGamification(
-                user_id=user_id,
-                current_xp=0,
-                current_level=1,
-                login_streak=0,
-                last_action_date=datetime.now(timezone.utc),
+            raise HTTPException(
+                status_code=404, detail="Gamification record not found."
             )
-            self.db.add(progress)
-            self.db.commit()
-            self.db.refresh(progress)
         return progress
 
-    def add_xp(self, user_id: str, amount: int) -> dict:
+    def create_initial_progress(self, user_id: uuid.UUID) -> UserGamificationResponse:
+        existing = (
+            self.db.query(UserGamification)
+            .filter(UserGamification.user_id == user_id)
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=400, detail="Gamification record already exists."
+            )
+
+        progress = UserGamification(
+            user_id=user_id,
+            current_xp=0,
+            current_level=1,
+            login_streak=0,
+            last_action_date=datetime.now(timezone.utc),
+        )
+        self.db.add(progress)
+        progress = _commit_and_refresh(self.db, progress)
+        return UserGamificationResponse.model_validate(progress)
+
+    def add_xp(self, user_id: uuid.UUID, amount: int) -> UserGamificationResponse:
+        if amount <= 0:
+            raise ValueError("XP amount must be greater than 0.")
+
         progress = self.get_progress(user_id)
         progress.current_xp += amount
 
-        xp_needed = progress.current_level * XP_PER_LEVEL_BASE
-
-        leveled_up = False
-        while progress.current_xp >= xp_needed:
+        while progress.current_xp >= (
+            xp_needed := progress.current_level * XP_PER_LEVEL_BASE
+        ):
             progress.current_xp -= xp_needed
             progress.current_level += 1
-            xp_needed = progress.current_level * XP_PER_LEVEL_BASE
-            leveled_up = True
 
-        self.db.commit()
-        self.db.refresh(progress)
+        progress = _commit_and_refresh(self.db, progress)
+        return UserGamificationResponse.model_validate(progress)
 
-        return {
-            "leveled_up": leveled_up,
-            "new_level": progress.current_level,
-            "current_xp": progress.current_xp,
-        }
-
-    def update_login_streak(self, user_id: str) -> int:
+    def update_login_streak(self, user_id: uuid.UUID) -> UserGamificationResponse:
         progress = self.get_progress(user_id)
         now = datetime.now(timezone.utc)
 
         if not progress.last_action_date:
+            progress.login_streak = 1
             progress.last_action_date = now
-            progress.login_streak = 1
-            self.db.commit()
-            return 1
+            progress = _commit_and_refresh(self.db, progress)
 
-        last_date = progress.last_action_date.date()
-        today = now.date()
+            return UserGamificationResponse.model_validate(progress)
 
-        delta = (today - last_date).days
+        delta = (now.date() - progress.last_action_date.date()).days
 
-        if delta == 1:
+        if delta == 0:
+            return UserGamificationResponse.model_validate(progress)
+
+        elif delta == 1:
             progress.login_streak += 1
-            self.add_xp(user_id, STREAK_BONUS_XP)
+            progress.last_action_date = now
+            progress = _commit_and_refresh(self.db, progress)
 
-        elif delta > 1:
+            return self.add_xp(user_id, STREAK_BONUS_XP)
+
+        else:
             progress.login_streak = 1
+            progress.last_action_date = now
+            progress = _commit_and_refresh(self.db, progress)
 
-        progress.last_action_date = now
-        self.db.commit()
-        return progress.login_streak
+            return UserGamificationResponse.model_validate(progress)
