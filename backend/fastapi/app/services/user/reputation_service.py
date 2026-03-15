@@ -1,10 +1,8 @@
-from os.path import expanduser
 import uuid
-from gotrue import Optional
+from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-from sqlalchemy.sql.functions import user
-from app.schemas.schema import UserReputation, User, VerificationTier, Review
+from app.schemas.schema import UserReputation, VerificationTier
 from backend.fastapi.app.libs.db_helper import _commit_and_refresh
 from backend.fastapi.app.libs.pagination import PaginatedResponse
 from backend.fastapi.app.schemas.dtos.user_reputation_dto import UserReputationResponse
