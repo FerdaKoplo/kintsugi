@@ -5,10 +5,10 @@ from gotrue import Optional
 from sqlalchemy import exists
 from sqlalchemy.orm import Session
 from app.schemas.schema import Item, ItemStatus, Job, JobStatus
-from backend.fastapi.app.libs.db_helper import _commit_and_refresh
-from backend.fastapi.app.libs.pagination import PaginatedResponse
-from backend.fastapi.app.schemas.dtos.job_dto import JobCreate, JobResponse
-from backend.fastapi.app.services.user.badge_service import BadgeService
+from app.libs.db_helper import _commit_and_refresh
+from app.libs.pagination import PaginatedResponse
+from app.schemas.dtos.job_dto import JobCreate, JobResponse
+from app.services.user.badge_service import BadgeService
 from sqlalchemy.exc import IntegrityError
 
 

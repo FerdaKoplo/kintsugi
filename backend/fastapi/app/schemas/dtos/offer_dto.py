@@ -6,7 +6,7 @@ import uuid
 
 from pydantic import BaseModel, field_validator
 
-from backend.fastapi.app.schemas.schema import OfferStatus
+from app.schemas.schema import OfferStatus
 
 
 class OfferBase(BaseModel):

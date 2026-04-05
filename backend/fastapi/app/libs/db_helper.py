@@ -5,6 +5,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 T = TypeVar("T", bound=DeclarativeBase)
 DATABASE_URL = os.getenv("DATABASE_URL")
 

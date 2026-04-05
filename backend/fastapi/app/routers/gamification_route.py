@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.schemas.schema import User
 from app.schemas.dtos.user_gamification_dto import UserGamificationResponse
-from backend.fastapi.app.libs.auth_helper import get_current_user, require_admin
-from backend.fastapi.app.libs.db_helper import get_db
-from backend.fastapi.app.services.user.gamification_service import GamificationService
+from app.libs.auth_helper import get_current_user, require_admin
+from app.libs.db_helper import get_db
+from app.services.user.gamification_service import GamificationService
 
 router = APIRouter(prefix="/gamification", tags=["Gamification"])
 

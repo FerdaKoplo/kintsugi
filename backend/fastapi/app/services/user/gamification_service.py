@@ -2,11 +2,11 @@ import uuid
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException
-from backend.fastapi.app.schemas.dtos.user_gamification_dto import (
+from app.schemas.dtos.user_gamification_dto import (
     UserGamificationResponse,
 )
-from backend.fastapi.app.libs.db_helper import _commit_and_refresh
-from backend.fastapi.app.schemas.schema import UserGamification
+from app.libs.db_helper import _commit_and_refresh
+from app.schemas.schema import UserGamification
 
 
 XP_PER_LEVEL_BASE = 100

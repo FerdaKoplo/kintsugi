@@ -2,13 +2,13 @@ import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
-from backend.fastapi.app.libs.db_helper import _commit_and_refresh
-from backend.fastapi.app.libs.pagination import PaginatedResponse
-from backend.fastapi.app.schemas.dtos.user_skill_dto import (
+from app.libs.db_helper import _commit_and_refresh
+from app.libs.pagination import PaginatedResponse
+from app.schemas.dtos.user_skill_dto import (
     UserSkillCreate,
     UserSkillResponse,
 )
-from backend.fastapi.app.schemas.schema import SkillLevel, UserSkill, UserVerifyStatus
+from app.schemas.schema import SkillLevel, UserSkill, UserVerifyStatus
 
 
 class UserSkillService:

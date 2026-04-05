@@ -4,15 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import annotated_handlers
 from sqlalchemy.orm import Session
 
-from backend.fastapi.app.libs.auth_helper import get_current_user, require_admin
-from backend.fastapi.app.libs.db_helper import get_db
-from backend.fastapi.app.libs.pagination import PaginatedResponse
-from backend.fastapi.app.schemas.dtos.user_skill_dto import (
+from app.libs.auth_helper import get_current_user, require_admin
+from app.libs.db_helper import get_db
+from app.libs.pagination import PaginatedResponse
+from app.schemas.dtos.user_skill_dto import (
     UserSkillCreate,
     UserSkillResponse,
 )
-from backend.fastapi.app.schemas.schema import SkillLevel, User, UserVerifyStatus
-from backend.fastapi.app.services.user.user_skill_service import UserSkillService
+from app.schemas.schema import SkillLevel, User, UserVerifyStatus
+from app.services.user.user_skill_service import UserSkillService
 
 
 router = APIRouter(prefix="/skill", tags=["Skills"])

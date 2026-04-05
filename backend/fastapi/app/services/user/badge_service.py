@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.schemas.schema import UserBadge, User
 from sqlalchemy import exists
 
-from backend.fastapi.app.libs.db_helper import _commit_and_refresh
-from backend.fastapi.app.schemas.dtos.badge_dto import UserBadgeResponse
+from app.libs.db_helper import _commit_and_refresh
+from app.schemas.dtos.badge_dto import UserBadgeResponse
 # from app.schemas.schema import UserBadge as UserBadgeSchema
 
 
@@ -31,7 +31,7 @@ class BadgeService:
         return count > 0
 
     def get_all_distributed_badges(
-        self, skip: int = 0, limit: int = 100
+        self, skip: int = 0, limit: int = 20
     ) -> List[UserBadgeResponse]:
         badges = (
             self.db.query(UserBadge)

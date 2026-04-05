@@ -6,7 +6,7 @@ import uuid
 
 from pydantic import BaseModel
 
-from backend.fastapi.app.schemas.schema import SkillLevel, UserVerifyStatus
+from app.schemas.schema import SkillLevel, UserVerifyStatus
 
 
 class UserSkillBase(BaseModel):

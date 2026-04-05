@@ -4,9 +4,9 @@ from gotrue import Optional
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_400_BAD_REQUEST
 from app.schemas.schema import Item, Offer, OfferStatus
-from backend.fastapi.app.libs.db_helper import _commit_and_refresh
-from backend.fastapi.app.libs.pagination import PaginatedResponse
-from backend.fastapi.app.schemas.dtos.offer_dto import OfferResponse, OfferCreate
+from app.libs.db_helper import _commit_and_refresh
+from app.libs.pagination import PaginatedResponse
+from app.schemas.dtos.offer_dto import OfferResponse, OfferCreate
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.exc import IntegrityError
 

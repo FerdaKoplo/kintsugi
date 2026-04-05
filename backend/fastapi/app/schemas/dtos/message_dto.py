@@ -6,7 +6,7 @@ import uuid
 
 from pydantic import BaseModel
 
-from backend.fastapi.app.schemas.schema import MessageStatus
+from app.schemas.schema import MessageStatus
 
 
 class MessageType(str, Enum):

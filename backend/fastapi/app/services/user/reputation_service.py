@@ -3,9 +3,9 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.schemas.schema import UserReputation, VerificationTier
-from backend.fastapi.app.libs.db_helper import _commit_and_refresh
-from backend.fastapi.app.libs.pagination import PaginatedResponse
-from backend.fastapi.app.schemas.dtos.user_reputation_dto import UserReputationResponse
+from app.libs.db_helper import _commit_and_refresh
+from app.libs.pagination import PaginatedResponse
+from app.schemas.dtos.user_reputation_dto import UserReputationResponse
 
 
 class ReputationService:
