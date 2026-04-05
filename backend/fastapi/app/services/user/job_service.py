@@ -43,7 +43,7 @@ class JobService:
             results=[JobResponse.model_validate(o) for o in offers],
         )
 
-    def has_active_job(self, fixer_id: uuid.UUID, client_id=uuid.UUID) -> bool:
+    def has_active_job(self, fixer_id: uuid.UUID, client_id: uuid.UUID) -> bool:
         count = (
             self.db.query(Job)
             .filter(
@@ -88,7 +88,7 @@ class JobService:
         job = _commit_and_refresh(self.db, job)
         return JobResponse.model_validate(job)
 
-    def complete_job(self, job_id: int, fixer_id: str) -> JobResponse:
+    def complete_job(self, job_id: int, fixer_id: uuid.UUID) -> JobResponse:
         job = self.get_job_by_id(job_id)
 
         if job.fixer_id != fixer_id:

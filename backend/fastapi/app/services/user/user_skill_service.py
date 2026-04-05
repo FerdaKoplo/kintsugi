@@ -2,6 +2,8 @@ import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
+from backend.fastapi.app.libs.db_helper import _commit_and_refresh
+from backend.fastapi.app.libs.pagination import PaginatedResponse
 from backend.fastapi.app.schemas.dtos.user_skill_dto import (
     UserSkillCreate,
     UserSkillResponse,
@@ -23,7 +25,7 @@ class UserSkillService:
         verified_level: Optional[UserVerifyStatus] = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> dict:
+    ) -> PaginatedResponse[UserSkillResponse]:
         query = self.db.query(UserSkill).filter(UserSkill.user_id == user_id)
         if skill_name:
             query = query.filter(UserSkill.skill_name.ilike(f"%{skill_name}%"))
@@ -35,7 +37,12 @@ class UserSkillService:
         total = query.count()
         skills = query.offset((page - 1) * page_size).limit(page_size).all()
 
-        return {"total": total, "page": page, "page_size": page_size, "results": skills}
+        return PaginatedResponse[UserSkillResponse](
+            total=total,
+            page=page,
+            page_size=page_size,
+            results=[UserSkillResponse.model_validate(s) for s in skills],
+        )
 
     def verify_user_skill(self, skill_id: int, verified_level: UserVerifyStatus):
         skill = self.db.query(UserSkill).filter(UserSkill.id == skill_id).first()
@@ -90,8 +97,7 @@ class UserSkillService:
         )
 
         self.db.add(skill)
-        self.db.commit()
-        self.db.refresh(skill)
+        skill = _commit_and_refresh(self.db, skill)
         return UserSkillResponse.model_validate(skill)
 
     def user_skill_progress(
@@ -117,6 +123,5 @@ class UserSkillService:
 
         skill.level = new_level
         skill.verified_level = UserVerifyStatus.UNVERIFIED
-        self.db.commit()
-        self.db.refresh(skill)
+        skill = _commit_and_refresh(self.db, skill)
         return UserSkillResponse.model_validate(skill)

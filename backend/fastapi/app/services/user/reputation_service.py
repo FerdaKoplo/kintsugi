@@ -57,7 +57,7 @@ class ReputationService:
         return UserReputationResponse.model_validate(rep)
 
     # users
-    def create_initial_reputation(self, user_id: str) -> UserReputationResponse:
+    def create_initial_reputation(self, user_id: uuid.UUID) -> UserReputationResponse:
         new_rep = UserReputation(
             user_id=user_id,
             average_rating=0.0,

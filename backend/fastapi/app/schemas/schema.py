@@ -109,6 +109,11 @@ class UserStatus(enum.Enum):
     PENDING = "pending_review"
 
 
+class UserRole(str, enum.Enum):
+    USER = "user"
+    ADMIN = "admin"
+
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[uuid.UUID] = mapped_column(
@@ -120,7 +125,9 @@ class User(Base):
     bio: Mapped[Optional[str]] = mapped_column(Text)
 
     user_status: Mapped[UserStatus] = mapped_column(
-        SAEnum(UserStatus), default=UserStatus.UNVERIFIED, nullable=False
+        SAEnum(UserStatus, native_enum=False),
+        default=UserStatus.UNVERIFIED,
+        nullable=False,
     )
     latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -141,6 +148,9 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
+    role: Mapped[UserRole] = mapped_column(
+        SAEnum(UserRole, native_enum=False), default=UserRole.USER, nullable=False
+    )
     reputation: Mapped["UserReputation"] = relationship(
         "UserReputation",
         back_populates="user",
@@ -232,7 +242,7 @@ class Item(Base):
     category: Mapped[str] = mapped_column(String, index=True)
 
     status: Mapped[ItemStatus] = mapped_column(
-        SAEnum(ItemStatus), default=ItemStatus.OPEN
+        SAEnum(ItemStatus, native_enum=False), default=ItemStatus.OPEN
     )
 
     images: Mapped[List[str]] = mapped_column(JSONB, default=[])
@@ -253,7 +263,7 @@ class Diagnosis(Base):
     item_id: Mapped[int] = mapped_column(ForeignKey("items.id"), nullable=False)
 
     diagnosis_type: Mapped[DiagnosisType] = mapped_column(
-        SAEnum(DiagnosisType), default=DiagnosisType.VISUAL
+        SAEnum(DiagnosisType, native_enum=False), default=DiagnosisType.VISUAL
     )
     ai_model_used: Mapped[str] = mapped_column(String)
 
@@ -278,7 +288,7 @@ class Offer(Base):
     price_bid: Mapped[float] = mapped_column(Float, nullable=False)
 
     status: Mapped[OfferStatus] = mapped_column(
-        SAEnum(OfferStatus), default=OfferStatus.PENDING
+        SAEnum(OfferStatus, native_enum=False), default=OfferStatus.PENDING
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
@@ -298,7 +308,7 @@ class Job(Base):
 
     agreed_price: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[JobStatus] = mapped_column(
-        SAEnum(JobStatus), default=JobStatus.ACTIVE
+        SAEnum(JobStatus, native_enum=False), default=JobStatus.ACTIVE
     )
 
     started_at: Mapped[datetime] = mapped_column(
@@ -328,10 +338,11 @@ class Message(Base):
     job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), nullable=False)
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     message_type: Mapped[MessageType] = mapped_column(  # ← add this
-        SAEnum(MessageType), default=MessageType.TEXT
+        SAEnum(MessageType, native_enum=False),
+        default=MessageType.TEXT,
     )
     message_status: Mapped[MessageStatus] = mapped_column(
-        SAEnum(MessageStatus), default=MessageStatus.DELIVERED
+        SAEnum(MessageStatus, native_enum=False), default=MessageStatus.DELIVERED
     )
     content: Mapped[str] = mapped_column(Text, nullable=True)
 
@@ -389,11 +400,11 @@ class UserSkill(Base):
     skill_name: Mapped[str] = mapped_column(String)
 
     level: Mapped[SkillLevel] = mapped_column(
-        SAEnum(SkillLevel), default=SkillLevel.BEGINNER
+        SAEnum(SkillLevel, native_enum=False), default=SkillLevel.BEGINNER
     )
 
     verified_level: Mapped[UserVerifyStatus] = mapped_column(
-        SAEnum(UserVerifyStatus), nullable=False
+        SAEnum(UserVerifyStatus, native_enum=False), nullable=False
     )
     user: Mapped["User"] = relationship("User", back_populates="skills")
 

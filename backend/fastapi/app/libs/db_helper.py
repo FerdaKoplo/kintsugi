@@ -1,21 +1,39 @@
-from typing import TypeVar
+import os
+from typing import Generator, TypeVar
 from fastapi import HTTPException
+from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 T = TypeVar("T", bound=DeclarativeBase)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is not set.")
+
+engine = create_engine(DATABASE_URL)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def _commit_and_refresh(self, obj: T) -> T:
+def _commit_and_refresh(db: Session, obj: T) -> T:
     try:
-        self.db.commit()
-        self.db.refresh(obj)
+        db.commit()
+        db.refresh(obj)
         return obj
     except IntegrityError:
-        self.db.rollback()
+        db.rollback()
         raise HTTPException(
             status_code=400, detail="Invalid reference — check foreign key constraints."
         )
     except Exception:
-        self.db.rollback()
+        db.rollback()
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

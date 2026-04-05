@@ -69,9 +69,9 @@ class OfferService:
         offer = _commit_and_refresh(self.db, offer)
         return OfferResponse.model_validate(offer)
 
-    def accept_offer(self, offer_id: int, fixer_id: uuid.UUID) -> OfferResponse:
+    def accept_offer(self, offer_id: int, client_id: uuid.UUID) -> OfferResponse:
         offer = self._get_pending_offer(offer_id)
-        if offer.fixer_id != fixer_id:
+        if offer.item.owner_id != client_id:
             raise HTTPException(
                 status_code=403, detail="You can only accept offers on your own items"
             )
